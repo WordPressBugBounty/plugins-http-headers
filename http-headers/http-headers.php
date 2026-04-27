@@ -3,7 +3,7 @@
 Plugin Name: HTTP Headers
 Plugin URI: https://github.com/riverside/http-headers
 Description: A plugin for HTTP headers management including security, access-control (CORS), caching, compression, and authentication.
-Version: 1.19.4
+Version: 1.19.5
 Author: Dimitar Ivanov
 Author URI: https://github.com/riverside
 License: GPLv2 or later
@@ -574,7 +574,7 @@ function http_headers_php_auth_digest() {
 		die('Wrong Credentials!');
 	}
 
-	$method = isset($_SERVER['REQUEST_METHOD']) ? sanitize_text_field(wp_unslash($_SERVER['REQUEST_METHOD'])) : '';
+	$method = http_headers_get_request_method();
 
 	$A1 = md5($data['username'] . ':' . get_option('hh_www_authenticate_realm') . ':' . get_option('hh_www_authenticate_pswd'));
 	$A2 = md5($method.':'.$data['uri']);
@@ -828,20 +828,24 @@ function http_headers_admin() {
 	register_setting('http-headers-rob', 'hh_x_robots_tag_value', $args);
 }
 	
+function http_headers_get_request_method() {
+    return isset($_SERVER['REQUEST_METHOD']) ? strtoupper(sanitize_text_field(wp_unslash($_SERVER['REQUEST_METHOD']))) : '';
+}
+	
 function http_headers_option($option) {
+
+    if (strpos($option, 'hh_') !== 0) {
+        return;
+    }
+
+    if (!current_user_can('manage_options')) {
+        return;
+    }
 
     include_once ABSPATH . 'wp-admin/includes/admin.php';
     
     require_once ABSPATH . WPINC . '/pluggable.php';
 
-	$action = '-options';
-	if (isset($_POST['option_page'])) {
-		$action = sanitize_text_field(wp_unslash($_POST['option_page'])) . '-options';
-	}
-	if (!isset($_POST['_wpnonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['_wpnonce'])), $action)) {
-		wp_safe_redirect(sprintf("%soptions-general.php?page=http-headers&tab=advanced&status=ERR&code=101", get_admin_url()));
-		exit;
-	}
     if (isset($_POST['hh_method']))
     {
         check_admin_referer('http-headers-mtd-options');
